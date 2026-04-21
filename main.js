@@ -224,6 +224,7 @@ let publishTimer = null;
 let viewerPollTimer = null;
 let transportReady = false;
 let remoteVersion = 0;
+let remoteLastUpdateMs = 0;
 
 const NOISE_FLOOR_LERP = 0.025;
 const VOICE_OPEN_OFFSET = 0.11;
@@ -279,6 +280,7 @@ async function pullSyncState() {
       mid: data.mid || 0,
       treble: data.treble || 0,
     };
+    remoteLastUpdateMs = data.ts || Date.now();
   }
 }
 
@@ -316,6 +318,7 @@ function startViewerStream() {
         mid: data.mid || 0,
         treble: data.treble || 0,
       };
+      remoteLastUpdateMs = data.ts || Date.now();
     } catch (err) {
       console.error("Bad event payload", err);
     }
@@ -359,6 +362,25 @@ function startPublishing() {
       transportReady = false;
     }
   }, 90);
+}
+
+async function publishFrame(level, bass, mid, treble) {
+  const { baseUrl, channel } = getTransportConfig();
+  const apiBase = resolveApiBase(baseUrl);
+  const isVercelMode = apiBase === window.location.origin || apiBase.includes("vercel.app");
+  const endpoint = isVercelMode ? `${apiBase}/api/orb-sync` : `${apiBase}/ingest`;
+  await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      channel,
+      level,
+      bass,
+      mid,
+      treble,
+      ts: Date.now(),
+    }),
+  });
 }
 
 function setVoiceState(state) {
@@ -430,6 +452,11 @@ async function stopMicrophone() {
   analyser = null;
   freqData = null;
   stopPublishing();
+  try {
+    await publishFrame(0, 0, 0, 0);
+  } catch (_error) {
+    // Best-effort stop frame for viewers.
+  }
   voiceActive = false;
   silenceTime = 0;
   cooldownTimer = CALM_DOWN_DURATION;
@@ -554,6 +581,13 @@ function animate() {
   }
 
   if (roleSelect.value === "viewer") {
+    const isStale = Date.now() - remoteLastUpdateMs > 900;
+    if (isStale) {
+      remoteFeed.level = THREE.MathUtils.lerp(remoteFeed.level, 0, 0.12);
+      remoteFeed.bass = THREE.MathUtils.lerp(remoteFeed.bass, 0, 0.12);
+      remoteFeed.mid = THREE.MathUtils.lerp(remoteFeed.mid, 0, 0.12);
+      remoteFeed.treble = THREE.MathUtils.lerp(remoteFeed.treble, 0, 0.12);
+    }
     const hasSignal = smoothedLevel > 0.04;
     setVoiceState(hasSignal ? VOICE_STATE.SPEAKING : VOICE_STATE.THINKING);
     if (!transportReady) updateStatus("Viewer: підключення...");
