@@ -45,6 +45,7 @@ const uniforms = {
   uTreble: { value: 0 },
   uStateMix: { value: 0 },
   uHaloPulse: { value: 0 },
+  uMotionGain: { value: 1 },
   uColorA: { value: new THREE.Color("#3aa3ff") },
   uColorB: { value: new THREE.Color("#8a4dff") },
 };
@@ -62,6 +63,7 @@ const material = new THREE.ShaderMaterial({
     uniform float uMid;
     uniform float uTreble;
     uniform float uStateMix;
+    uniform float uMotionGain;
     varying float vWave;
     varying vec3 vNormal;
 
@@ -92,6 +94,7 @@ const material = new THREE.ShaderMaterial({
 
       float spike = max(0.0, n2) * (0.18 + uAudioLevel * 1.6);
       float displacement = n1 * (0.12 + uAudioLevel * 0.42) + spike * uAudioLevel * 0.55 + bassWobble + midWobble + trebleSpike + thinkingRipple;
+      displacement *= uMotionGain;
 
       p += normal * displacement;
       vWave = displacement;
@@ -123,7 +126,6 @@ const material = new THREE.ShaderMaterial({
 });
 
 const orb = new THREE.Mesh(geometry, material);
-scene.add(orb);
 
 const coreGeometry = new THREE.IcosahedronGeometry(1.12, 32);
 const coreMaterial = new THREE.ShaderMaterial({
@@ -160,7 +162,6 @@ const coreMaterial = new THREE.ShaderMaterial({
   `,
 });
 const coreOrb = new THREE.Mesh(coreGeometry, coreMaterial);
-scene.add(coreOrb);
 
 const haloGeometry = new THREE.RingGeometry(1.86, 2.24, 260);
 const haloMaterial = new THREE.ShaderMaterial({
@@ -202,7 +203,12 @@ const haloMaterial = new THREE.ShaderMaterial({
 });
 const haloRing = new THREE.Mesh(haloGeometry, haloMaterial);
 haloRing.position.z = -0.2;
-scene.add(haloRing);
+
+const orbGroup = new THREE.Group();
+orbGroup.add(orb);
+orbGroup.add(coreOrb);
+orbGroup.add(haloRing);
+scene.add(orbGroup);
 
 const clock = new THREE.Clock();
 
@@ -230,6 +236,28 @@ const NOISE_FLOOR_LERP = 0.025;
 const VOICE_OPEN_OFFSET = 0.11;
 const VOICE_CLOSE_OFFSET = 0.075;
 const CALM_DOWN_DURATION = 0.8;
+
+function updateViewportTuning() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const minSide = Math.min(width, height);
+  const maxSide = Math.max(width, height);
+  const isTabletLike = minSide >= 700 && maxSide <= 1400;
+
+  if (isTabletLike) {
+    camera.position.z = 7.35;
+    uniforms.uMotionGain.value = 0.72;
+    orbGroup.scale.setScalar(0.88);
+  } else if (minSide < 700) {
+    camera.position.z = 7.8;
+    uniforms.uMotionGain.value = 0.68;
+    orbGroup.scale.setScalar(0.82);
+  } else {
+    camera.position.z = 6.2;
+    uniforms.uMotionGain.value = 1;
+    orbGroup.scale.setScalar(1);
+  }
+}
 
 function updateStatus(text) {
   statusText.textContent = text;
@@ -609,6 +637,7 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  updateViewportTuning();
 });
 
 micButton.addEventListener("click", async () => {
@@ -635,6 +664,7 @@ connectButton.addEventListener("click", async () => {
 if (!serverUrlInput.value.trim()) {
   serverUrlInput.value = window.location.origin;
 }
+updateViewportTuning();
 setVoiceState(VOICE_STATE.IDLE);
 
 animate();
