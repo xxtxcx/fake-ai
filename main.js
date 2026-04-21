@@ -255,8 +255,14 @@ function resetRemoteConnection() {
 }
 
 function resolveApiBase(baseUrl) {
-  if (!baseUrl) return window.location.origin;
-  return baseUrl;
+  const raw = (baseUrl || "").trim();
+  if (!raw) return window.location.origin;
+  const isProdPage = window.location.hostname.includes("vercel.app");
+  const pointsToLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(raw);
+  if (isProdPage && pointsToLocalhost) {
+    return window.location.origin;
+  }
+  return raw;
 }
 
 async function pullSyncState() {
@@ -591,6 +597,10 @@ connectButton.addEventListener("click", async () => {
     updateStatus("Source режим. Увімкніть мікрофон");
   }
 });
+
+if (!serverUrlInput.value.trim()) {
+  serverUrlInput.value = window.location.origin;
+}
 setVoiceState(VOICE_STATE.IDLE);
 
 animate();
