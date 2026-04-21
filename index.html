@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fake AI Voice Mode</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene"></canvas>
+
+      <header class="top-bar">
+        <div class="brand">
+          <div class="brand-logo" aria-hidden="true"></div>
+          <div class="brand-text">
+            <strong>FAKE AI</strong>
+            <span>Voice Mode</span>
+          </div>
+        </div>
+        <div class="controls">
+          <select id="roleSelect" class="ui-input">
+            <option value="source">Я говорю (source)</option>
+            <option value="viewer">Лише перегляд (viewer)</option>
+          </select>
+          <input id="serverUrlInput" class="ui-input" value="http://localhost:8080" />
+          <input id="channelInput" class="ui-input short" value="demo-room" />
+          <button id="connectButton" class="mic-button">Підключити</button>
+          <button id="micButton" class="mic-button">Увімкнути мікрофон</button>
+        </div>
+      </header>
+
+      <main class="center-ui">
+        <div class="orb-glow"></div>
+        <div class="status-card">
+          <p class="status-label">Стан</p>
+          <p id="statusText" class="status-text">Очікує мікрофон</p>
+          <div id="thinkingDots" class="thinking" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
